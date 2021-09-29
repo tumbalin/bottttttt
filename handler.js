@@ -2,7 +2,6 @@ let util = require('util')
 let fetch = require('node-fetch')
 let simple = require('./lib/simple')
 const uploadImage = require('./lib/uploadImage')
-const knights = require('knights-canvas')
 let { MessageType } = require('@adiwajshing/baileys')
 
 const isNumber = x => typeof x === 'number' && !isNaN(x)
@@ -375,6 +374,7 @@ module.exports = {
   async participantsUpdate({ jid, participants, action }) {
     let chat = global.db.data.chats[jid] || {}
     let text = ''
+    console.log(action);
     switch (action) {
       case 'add':
       case 'remove':
@@ -391,29 +391,41 @@ module.exports = {
             } finally {
               text = (action === 'add' ? (chat.sWelcome || this.welcome || conn.welcome || 'Selamat datang, @user!').replace('@subject', this.getName(jid)).replace('@desc', groupMetadata.desc ? String.fromCharCode(8206).repeat(4001) + groupMetadata.desc : '') :
                 (chat.sBye || this.bye || conn.bye || 'Sampai jumpa, @user!')).replace(/@user/g, '@' + user.split`@`[0])
-              let wel = await new knights.Welcome()
-                .setUsername(this.getName(user))
-                .setGuildName(this.getName(jid))
-                .setGuildIcon(ppgc)
-                .setMemberCount(groupMetadata.participants.length)
-                .setAvatar(pp)
-                .setBackground("https://i.ibb.co/KhtRxwZ/dark.png")
-                .toAttachment()
+              let wel, lea;
+              if(!global.UsingCanvasAPI){
+                const knights = require('knights-canvas')
+                wel = await new knights.Welcome()
+                  .setUsername(this.getName(user))
+                  .setGuildName(this.getName(jid))
+                  .setGuildIcon(ppgc)
+                  .setMemberCount(groupMetadata.participants.length)
+                  .setAvatar(pp)
+                  .setBackground("https://i.ibb.co/KhtRxwZ/dark.png")
+                  .toAttachment()
 
-              let lea = await new knights.Goodbye()
-                .setUsername(this.getName(user))
-                .setGuildName(this.getName(jid))
-                .setGuildIcon(ppgc)
-                .setMemberCount(groupMetadata.participants.length)
-                .setAvatar(pp)
-                .setBackground("https://i.ibb.co/KhtRxwZ/dark.png")
-                .toAttachment()
+                lea = await new knights.Goodbye()
+                  .setUsername(this.getName(user))
+                  .setGuildName(this.getName(jid))
+                  .setGuildIcon(ppgc)
+                  .setMemberCount(groupMetadata.participants.length)
+                  .setAvatar(pp)
+                  .setBackground("https://i.ibb.co/KhtRxwZ/dark.png")
+                  .toAttachment();
 
-              this.sendFile(jid, action === 'add' ? wel.toBuffer() : lea.toBuffer(), 'pp.jpg', text, null, false, {
-                contextInfo: {
-                  mentionedJid: [user]
-                }
-              })
+                this.sendFile(jid, action === 'add' ? wel.toBuffer() : lea.toBuffer(), 'pp.jpg', text, null, false, {
+                  contextInfo: {
+                    mentionedJid: [user]
+                  }
+                })
+              } else {
+                wel = `${global.CanvasAPI != '' ? global.canvasAPI : 'https://canvas-heroku-stikerinbot.herokuapp.com'}/generatewelcome?username=${this.getName(user)}&groupname=${this.getName(jid)}&grouplength=${groupMetadata.participants.length}&avatarurl=${pp}&groupavatar=${ppgc}` // If You Want Custom Background Add &bg=URL
+                lea = `${global.CanvasAPI != ''? global.canvasAPI : 'https://canvas-heroku-stikerinbot.herokuapp.com'}/generatebye?username=${this.getName(user)}&groupname=${this.getName(jid)}&grouplength=${groupMetadata.participants.length}&avatarurl=${pp}&groupavatar=${ppgc}` // If You Want Custom Background Add &bg=URL
+                this.sendFile(jid, action === 'add' ? wel : lea, 'pp.jpg', text, null, false, {
+                  contextInfo: {
+                    mentionedJid: [user]
+                  }
+                })
+              }
             }
           }
         }
